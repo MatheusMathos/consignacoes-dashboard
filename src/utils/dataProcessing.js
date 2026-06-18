@@ -1,3 +1,9 @@
+// ─── Classificação de erros (declarada no topo para uso em computeKPIs) ─────
+
+const ERRO_KEYWORDS = [
+  'ERRO', 'SEM REMESSA', 'NF CANCELADA', 'RETORNO MENOR', 'RETIRADA',
+]
+
 // ─── Normalização ────────────────────────────────────────────────────────────
 
 export function removeAccents(str) {
@@ -124,8 +130,8 @@ export function computeKPIs(rows) {
     r => r._anotacao === 'SEM RETORNO' || r._anotacao === 'NF SEM RETORNO'
   )
 
-  // Erros: separado dos pendentes
-  const comErro = rows.filter(r => r._anotacao.startsWith('ERRO') || r._anotacao === 'SEM REMESSA')
+  // Erros: mesma lógica de getErrors/ERRO_KEYWORDS
+  const comErro = rows.filter(r => classifyError(r['Anotações']) !== null)
 
   return {
     total,
@@ -335,11 +341,7 @@ export function getAllNoReturn(rows) {
 }
 
 // ─── Erros ────────────────────────────────────────────────────────────────────
-
 // SEM RETORNO e NF SEM RETORNO são tratados na aba "Sem Devolução" — não entram em Erros
-const ERRO_KEYWORDS = [
-  'ERRO', 'SEM REMESSA', 'NF CANCELADA', 'RETORNO MENOR', 'RETIRADA',
-]
 
 export function classifyError(anotacao) {
   const a = norm(anotacao)
