@@ -33,6 +33,7 @@ export default function MonthAnalysis({ data }) {
   const months = useMemo(() => getAvailableMonths(data), [data])
   const [selectedKey, setSelectedKey] = useState(months[months.length - 1]?.key || '')
   const [showTable, setShowTable] = useState(false)
+  const [pendSort, setPendSort] = useState('desc') // 'desc' | 'asc'
 
   const selected = useMemo(
     () => months.find(m => m.key === selectedKey),
@@ -246,54 +247,72 @@ export default function MonthAnalysis({ data }) {
       {/* ── Tabela detalhada ──────────────────────────────────────── */}
       {pendenteCount > 0 && (
         <>
-          <button
-            onClick={() => setShowTable(t => !t)}
-            style={{
-              fontSize: '0.75rem', fontWeight: 600, color: 'var(--accent-dark)',
-              padding: '0.45rem 1rem', border: '1px solid var(--accent)',
-              borderRadius: 'var(--radius-sm)', background: 'var(--surface)',
-              marginBottom: '0.75rem', letterSpacing: '0.5px',
-            }}
-          >
-            {showTable ? '▲ Ocultar' : '▼ Ver'} notas com SEM RETORNO ({pendenteCount})
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => setShowTable(t => !t)}
+              style={{
+                fontSize: '0.75rem', fontWeight: 600, color: 'var(--accent-dark)',
+                padding: '0.45rem 1rem', border: '1px solid var(--accent)',
+                borderRadius: 'var(--radius-sm)', background: 'var(--surface)',
+                letterSpacing: '0.5px',
+              }}
+            >
+              {showTable ? '▲ Ocultar' : '▼ Ver'} notas com SEM RETORNO ({pendenteCount})
+            </button>
+            {showTable && (
+              <button
+                onClick={() => setPendSort(s => s === 'desc' ? 'asc' : 'desc')}
+                style={{
+                  fontSize: '0.75rem', fontWeight: 600,
+                  padding: '0.4rem 0.85rem', borderRadius: 'var(--radius-sm)',
+                  border: '1.5px solid var(--border)', background: 'var(--surface)',
+                  color: 'var(--text-2)', cursor: 'pointer',
+                }}
+              >
+                Valor {pendSort === 'desc' ? '▼ Maior → Menor' : '▲ Menor → Maior'}
+              </button>
+            )}
+          </div>
 
-          {showTable && (
-            <div style={{
-              background: 'var(--surface)', borderRadius: 'var(--radius)',
-              border: '1px solid var(--border)', boxShadow: 'var(--shadow)',
-              overflow: 'auto', maxHeight: 400,
-            }}>
-              <table>
-                <thead>
-                  <tr>
-                    <th>NF</th>
-                    <th>Loja</th>
-                    <th>Cliente</th>
-                    <th>Consultora</th>
-                    <th className="right">Valor</th>
-                    <th>Anotação</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pendentesRows.map((r, i) => (
-                    <tr key={i}>
-                      <td style={{ fontWeight: 600 }}>{String(r['NF'])}</td>
-                      <td className="muted">{r['Loja']}</td>
-                      <td>{r['Nome da Cliente'] || '—'}</td>
-                      <td className="muted">{String(r['Nome da Consultora'] || '—').trim()}</td>
-                      <td className="right" style={{ color: 'var(--danger)', fontWeight: 600 }}>
-                        {fmtBRL(r._valor)}
-                      </td>
-                      <td>
-                        <ErrorBadge text={r['Anotações']} />
-                      </td>
+          {showTable && (() => {
+            const sorted = [...pendentesRows].sort((a, b) =>
+              pendSort === 'desc' ? b._valor - a._valor : a._valor - b._valor
+            )
+            return (
+              <div style={{
+                background: 'var(--surface)', borderRadius: 'var(--radius)',
+                border: '1px solid var(--border)', boxShadow: 'var(--shadow)',
+                overflow: 'auto', maxHeight: 400,
+              }}>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>NF</th>
+                      <th>Loja</th>
+                      <th>Cliente</th>
+                      <th>Consultora</th>
+                      <th className="right">Valor</th>
+                      <th>Anotação</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  </thead>
+                  <tbody>
+                    {sorted.map((r, i) => (
+                      <tr key={i}>
+                        <td style={{ fontWeight: 600 }}>{String(r['NF'])}</td>
+                        <td className="muted">{r['Loja']}</td>
+                        <td>{r['Nome da Cliente'] || '—'}</td>
+                        <td className="muted">{String(r['Nome da Consultora'] || '—').trim()}</td>
+                        <td className="right" style={{ color: 'var(--danger)', fontWeight: 600 }}>
+                          {fmtBRL(r._valor)}
+                        </td>
+                        <td><ErrorBadge text={r['Anotações']} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
+          })()}
         </>
       )}
     </div>

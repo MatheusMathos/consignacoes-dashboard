@@ -39,10 +39,11 @@ input, select {
 }
 
 /* Scrollbar */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--surface-2); border-radius: 4px; }
+::-webkit-scrollbar-thumb { background: var(--accent-dark); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-2); }
+* { scrollbar-width: thin; scrollbar-color: var(--accent-dark) var(--surface-2); }
 
 /* Animations */
 @keyframes fadeIn {

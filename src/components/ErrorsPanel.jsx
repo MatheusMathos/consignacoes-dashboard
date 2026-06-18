@@ -41,9 +41,10 @@ function CustomTooltip({ active, payload, label }) {
 export default function ErrorsPanel({ data }) {
   const summary = useMemo(() => getErrorSummary(data), [data])
   const [activeType, setActiveType] = useState(null)
-  const [search, setSearch] = useState('')
+  const [search, setSearch]         = useState('')
+  const [sortDir, setSortDir]       = useState('desc') // 'desc' | 'asc' por valor
 
-  // Linhas filtradas
+  // Linhas filtradas + ordenadas
   const filteredRows = useMemo(() => {
     let rows = summary.rows
     if (activeType) {
@@ -61,8 +62,10 @@ export default function ErrorsPanel({ data }) {
         (r['Loja'] || '').toLowerCase().includes(s)
       )
     }
-    return rows
-  }, [summary.rows, activeType, search])
+    return [...rows].sort((a, b) =>
+      sortDir === 'desc' ? b._valor - a._valor : a._valor - b._valor
+    )
+  }, [summary.rows, activeType, search, sortDir])
 
   if (summary.total === 0) {
     return (
@@ -214,12 +217,14 @@ export default function ErrorsPanel({ data }) {
           placeholder="Buscar NF, cliente, loja..."
           value={search}
           onChange={e => setSearch(e.target.value)}
-          style={{
-            padding: '0.45rem 0.85rem', borderRadius: 'var(--radius-sm)',
-            border: '1.5px solid var(--border)', background: 'var(--surface)',
-            fontSize: '0.8125rem', flex: 1, minWidth: 200,
-          }}
+          style={{ padding: '0.45rem 0.85rem', borderRadius: 'var(--radius-sm)', border: '1.5px solid var(--border)', background: 'var(--surface)', fontSize: '0.8125rem', flex: 1, minWidth: 200 }}
         />
+        <button
+          onClick={() => setSortDir(d => d === 'desc' ? 'asc' : 'desc')}
+          style={{ fontSize: '0.75rem', fontWeight: 600, padding: '0.4rem 0.85rem', borderRadius: 'var(--radius-sm)', border: '1.5px solid var(--border)', background: 'var(--surface)', color: 'var(--text-2)', cursor: 'pointer', whiteSpace: 'nowrap' }}
+        >
+          Valor {sortDir === 'desc' ? '▼ Maior → Menor' : '▲ Menor → Maior'}
+        </button>
         <span style={{ fontSize: '0.75rem', color: 'var(--text-2)', whiteSpace: 'nowrap' }}>
           {fmtInt(filteredRows.length)} notas · {fmtBRL(filteredRows.reduce((s, r) => s + r._valor, 0))}
         </span>

@@ -45,11 +45,65 @@ function CustomTooltip({ active, payload, label }) {
   )
 }
 
+// Helpers de data para filtro de mês
+function toMonthVal(date) {
+  if (!date) return ''
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+}
+function fromMonthVal(str) {
+  if (!str) return null
+  const [y, m] = str.split('-').map(Number)
+  return new Date(y, m - 1, 1)
+}
+
 export default function ClientsPanel({ data }) {
-  const ranking = useMemo(() => getClientRanking(data), [data])
-  const [sortBy, setSortBy] = useState('valor') // 'valor' | 'dias' | 'qtd'
-  const [search, setSearch] = useState('')
-  const [expanded, setExpanded] = useState(null)
+  const allRanking = useMemo(() => getClientRanking(data), [data])
+
+  // Datas mín/máx das notas
+  const { minDate, maxDate } = useMemo(() => {
+    let min = null, max = null
+    for (const c of allRanking) {
+      for (const n of c.notas) {
+        if (n.dataEmissao) {
+          if (!min || n.dataEmissao < min) min = n.dataEmissao
+          if (!max || n.dataEmissao > max) max = n.dataEmissao
+        }
+      }
+    }
+    return { minDate: min, maxDate: max }
+  }, [allRanking])
+
+  const [fromMonth, setFromMonth] = useState('')
+  const [toMonth, setToMonth]     = useState('')
+  const [sortBy, setSortBy]       = useState('valor')
+  const [search, setSearch]       = useState('')
+  const [expanded, setExpanded]   = useState(null)
+
+  const effectiveFrom = fromMonth || ''
+  const effectiveTo   = toMonth   || ''
+
+  // Filtra clientes cujas notas estejam no período selecionado
+  const ranking = useMemo(() => {
+    if (!effectiveFrom && !effectiveTo) return allRanking
+    const fromDate = fromMonthVal(effectiveFrom)
+    const toDate   = effectiveTo
+      ? new Date(Number(effectiveTo.split('-')[0]), Number(effectiveTo.split('-')[1]), 0)
+      : null
+
+    return allRanking.map(c => {
+      const notasFiltradas = c.notas.filter(n => {
+        if (!n.dataEmissao) return false
+        if (fromDate && n.dataEmissao < fromDate) return false
+        if (toDate   && n.dataEmissao > toDate)   return false
+        return true
+      })
+      if (!notasFiltradas.length) return null
+      const valor = notasFiltradas.reduce((s, n) => s + n.valor, 0)
+      const notaMaisAntiga = notasFiltradas.reduce((m, n) => (!m || (n.dataEmissao && n.dataEmissao < m) ? n.dataEmissao : m), null)
+      const diasMaximo = notaMaisAntiga ? Math.floor((new Date() - notaMaisAntiga) / 86400000) : null
+      return { ...c, notas: notasFiltradas, qtd: notasFiltradas.length, valor, notaMaisAntiga, diasMaximo }
+    }).filter(Boolean)
+  }, [allRanking, effectiveFrom, effectiveTo])
 
   const sorted = useMemo(() => {
     let list = [...ranking]
@@ -69,9 +123,8 @@ export default function ClientsPanel({ data }) {
 
   const totalValor = ranking.reduce((s, c) => s + c.valor, 0)
   const totalNotas = ranking.reduce((s, c) => s + c.qtd, 0)
-  const maxDias = ranking.reduce((m, c) => Math.max(m, c.diasMaximo ?? 0), 0)
+  const maxDias    = ranking.reduce((m, c) => Math.max(m, c.diasMaximo ?? 0), 0)
 
-  // Top 8 por valor para o gráfico
   const chartData = [...ranking]
     .sort((a, b) => b.valor - a.valor)
     .slice(0, 8)
@@ -81,7 +134,7 @@ export default function ClientsPanel({ data }) {
       Valor: c.valor,
     }))
 
-  if (ranking.length === 0) {
+  if (allRanking.length === 0) {
     return (
       <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--success)', fontWeight: 600 }}>
         ✅ Nenhuma cliente com notas SEM RETORNO.
@@ -91,6 +144,51 @@ export default function ClientsPanel({ data }) {
 
   return (
     <div className="fade-in">
+
+      {/* Filtro de período */}
+      <div style={{
+        background: 'var(--surface)', border: '1px solid var(--border)',
+        borderRadius: 'var(--radius)', padding: '1rem 1.25rem',
+        marginBottom: '1.25rem', boxShadow: 'var(--shadow)',
+        display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center',
+      }}>
+        <span style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--text-2)' }}>
+          Período
+        </span>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <label style={{ fontSize: '0.75rem', color: 'var(--text-2)' }}>De</label>
+          <input
+            type="month"
+            value={fromMonth}
+            min={toMonthVal(minDate)}
+            max={toMonthVal(maxDate)}
+            onChange={e => setFromMonth(e.target.value)}
+            style={{ padding: '0.4rem 0.65rem', borderRadius: 'var(--radius-sm)', border: '1.5px solid var(--border)', background: 'var(--surface)', fontSize: '0.8125rem', color: 'var(--text)' }}
+          />
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <label style={{ fontSize: '0.75rem', color: 'var(--text-2)' }}>Até</label>
+          <input
+            type="month"
+            value={toMonth}
+            min={toMonthVal(minDate)}
+            max={toMonthVal(maxDate)}
+            onChange={e => setToMonth(e.target.value)}
+            style={{ padding: '0.4rem 0.65rem', borderRadius: 'var(--radius-sm)', border: '1.5px solid var(--border)', background: 'var(--surface)', fontSize: '0.8125rem', color: 'var(--text)' }}
+          />
+        </div>
+        {(fromMonth || toMonth) && (
+          <button
+            onClick={() => { setFromMonth(''); setToMonth('') }}
+            style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--accent-dark)', padding: '0.38rem 0.85rem', border: '1px solid var(--accent)', borderRadius: 'var(--radius-sm)', background: 'var(--surface)', cursor: 'pointer' }}
+          >
+            Limpar filtro
+          </button>
+        )}
+        <span style={{ fontSize: '0.75rem', color: 'var(--text-3)', marginLeft: 'auto' }}>
+          {!fromMonth && !toMonth ? 'Todos os períodos' : `${ranking.length} clientes no período`}
+        </span>
+      </div>
 
       {/* KPIs */}
       <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.75rem' }}>

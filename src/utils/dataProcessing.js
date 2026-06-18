@@ -302,11 +302,43 @@ export function getNoReturnLast3Months(rows) {
   return { rows: filteredRows, cutoff, maxDate }
 }
 
+// Retorna TODAS as saídas SEM RETORNO (sem filtro de data) para o painel com filtro livre
+export function getAllNoReturn(rows) {
+  let minDate = null
+  let maxDate = null
+  for (const r of rows) {
+    if (r._dataEmissao) {
+      if (!minDate || r._dataEmissao < minDate) minDate = r._dataEmissao
+      if (!maxDate || r._dataEmissao > maxDate) maxDate = r._dataEmissao
+    }
+  }
+
+  const allRows = rows.filter(r => {
+    if (!r._dataEmissao) return false
+    if (r._especie !== 'SAIDA') return false
+    return r._anotacao === 'SEM RETORNO' || r._anotacao === 'NF SEM RETORNO'
+  }).map(r => ({
+    nf: r['NF'],
+    loja: r['Loja'],
+    cliente: r['Nome da Cliente'],
+    consultora: r['Nome da Consultora'],
+    dataEmissao: r._dataEmissao,
+    dataEmissaoStr: r._dataEmissao ? r._dataEmissao.toLocaleDateString('pt-BR') : '—',
+    valor: r._valor,
+    anotacao: r['Anotações'] || '—',
+    diasPendente: r._dataEmissao
+      ? Math.floor((new Date() - r._dataEmissao) / 86400000)
+      : null,
+  }))
+
+  return { allRows, minDate, maxDate }
+}
+
 // ─── Erros ────────────────────────────────────────────────────────────────────
 
+// SEM RETORNO e NF SEM RETORNO são tratados na aba "Sem Devolução" — não entram em Erros
 const ERRO_KEYWORDS = [
-  'ERRO', 'SEM RETORNO', 'NF SEM RETORNO', 'SEM REMESSA',
-  'NF CANCELADA', 'RETORNO MENOR', 'RETIRADA',
+  'ERRO', 'SEM REMESSA', 'NF CANCELADA', 'RETORNO MENOR', 'RETIRADA',
 ]
 
 export function classifyError(anotacao) {

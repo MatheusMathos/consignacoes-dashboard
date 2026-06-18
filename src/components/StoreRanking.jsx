@@ -48,35 +48,6 @@ export default function StoreRanking({ data }) {
 
   return (
     <div className="fade-in">
-      <SectionTitle>Saídas vs Retornos por Loja</SectionTitle>
-      <div style={{
-        background: 'var(--surface)', borderRadius: 'var(--radius)',
-        border: '1px solid var(--border)', padding: '1.5rem',
-        boxShadow: 'var(--shadow)', marginBottom: '1.75rem',
-      }}>
-        <ResponsiveContainer width="100%" height={320}>
-          <BarChart data={chartData} layout="vertical" margin={{ left: 0, right: 20 }} barGap={2} barSize={12}>
-            <XAxis type="number"
-              tickFormatter={v => `R$ ${(v/1000).toFixed(0)}k`}
-              tick={{ fontSize: 10, fill: 'var(--text-2)' }} axisLine={false} tickLine={false} />
-            <YAxis type="category" dataKey="name" width={160}
-              tick={{ fontSize: 10, fill: 'var(--text-2)' }} axisLine={false} tickLine={false} />
-            <Tooltip content={<CustomTooltip />} />
-            <Bar dataKey="Saídas"   fill="#C9B99A" radius={[0,3,3,0]} name="Saídas" />
-            <Bar dataKey="Retornos" fill="#3A8C5C" radius={[0,3,3,0]} name="Retornos" />
-            <Bar dataKey="Pendente" fill="#D14B3A" radius={[0,3,3,0]} name="Pendente" />
-          </BarChart>
-        </ResponsiveContainer>
-        <div style={{ display: 'flex', gap: '1.5rem', marginTop: '0.75rem', justifyContent: 'center' }}>
-          {[['#C9B99A','Saídas'],['#3A8C5C','Retornos'],['#D14B3A','Pendente']].map(([c,l]) => (
-            <div key={l} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: 'var(--text-2)' }}>
-              <div style={{ width: 10, height: 10, borderRadius: 2, background: c }} />
-              {l}
-            </div>
-          ))}
-        </div>
-      </div>
-
       <SectionTitle>Ranking de Pendências por Loja</SectionTitle>
       <div style={{
         background: 'var(--surface)', borderRadius: 'var(--radius)',
@@ -109,6 +80,30 @@ export default function StoreRanking({ data }) {
             </div>
           </div>
         ))}
+      </div>
+
+      <SectionTitle>Saídas vs Retornos por Loja</SectionTitle>
+      <div style={{ background: 'var(--surface)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', padding: '1.5rem', boxShadow: 'var(--shadow)', marginBottom: '1.75rem' }}>
+        <ResponsiveContainer width="100%" height={320}>
+          <BarChart data={chartData} layout="vertical" margin={{ left: 0, right: 20 }} barGap={2} barSize={12}>
+            <XAxis type="number" tickFormatter={v => `R$ ${(v/1000).toFixed(0)}k`}
+              tick={{ fontSize: 10, fill: 'var(--text-2)' }} axisLine={false} tickLine={false} />
+            <YAxis type="category" dataKey="name" width={160}
+              tick={{ fontSize: 10, fill: 'var(--text-2)' }} axisLine={false} tickLine={false} />
+            <Tooltip content={<CustomTooltip />} />
+            <Bar dataKey="Saídas"   fill="#C9B99A" radius={[0,3,3,0]} name="Saídas" />
+            <Bar dataKey="Retornos" fill="#3A8C5C" radius={[0,3,3,0]} name="Retornos" />
+            <Bar dataKey="Pendente" fill="#D14B3A" radius={[0,3,3,0]} name="Pendente" />
+          </BarChart>
+        </ResponsiveContainer>
+        <div style={{ display: 'flex', gap: '1.5rem', marginTop: '0.75rem', justifyContent: 'center' }}>
+          {[['#C9B99A','Saídas'],['#3A8C5C','Retornos'],['#D14B3A','Pendente']].map(([c,l]) => (
+            <div key={l} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: 'var(--text-2)' }}>
+              <div style={{ width: 10, height: 10, borderRadius: 2, background: c }} />
+              {l}
+            </div>
+          ))}
+        </div>
       </div>
 
       <SectionTitle>Tabela Completa</SectionTitle>
