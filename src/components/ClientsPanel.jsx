@@ -1,8 +1,21 @@
-import { useMemo, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from 'recharts'
 import { getClientRanking, fmtBRL, fmtInt, fmtDate } from '../utils/dataProcessing.js'
+import { SortableTh, useSortableTable, sortRows } from '../utils/sortableTable.jsx'
+import { exportTableToExcel } from '../utils/exportExcel.js'
+import ExportButton from './ExportButton.jsx'
+
+const CLIENT_COLUMNS = {
+  cliente:       c => c.cliente,
+  lojas:         c => c.lojas.join(', '),
+  consultoras:   c => c.consultoras.join(', '),
+  qtd:           c => c.qtd,
+  valor:         c => c.valor,
+  notaMaisAntiga: c => c.notaMaisAntiga ? c.notaMaisAntiga.getTime() : 0,
+  dias:          c => c.diasMaximo ?? 0,
+}
 
 function SectionTitle({ children }) {
   return (
@@ -75,7 +88,7 @@ export default function ClientsPanel({ data }) {
 
   const [fromMonth, setFromMonth] = useState('')
   const [toMonth, setToMonth]     = useState('')
-  const [sortBy, setSortBy]       = useState('valor')
+  const { sortCol, sortDir, onSort } = useSortableTable('valor', 'desc')
   const [search, setSearch]       = useState('')
   const [expanded, setExpanded]   = useState(null)
 
@@ -106,7 +119,7 @@ export default function ClientsPanel({ data }) {
   }, [allRanking, effectiveFrom, effectiveTo])
 
   const sorted = useMemo(() => {
-    let list = [...ranking]
+    let list = ranking
     if (search) {
       const s = search.toLowerCase()
       list = list.filter(c =>
@@ -115,11 +128,8 @@ export default function ClientsPanel({ data }) {
         c.consultoras.some(co => co.toLowerCase().includes(s))
       )
     }
-    if (sortBy === 'valor') list.sort((a, b) => b.valor - a.valor)
-    else if (sortBy === 'dias') list.sort((a, b) => (b.diasMaximo ?? 0) - (a.diasMaximo ?? 0))
-    else if (sortBy === 'qtd') list.sort((a, b) => b.qtd - a.qtd)
-    return list
-  }, [ranking, sortBy, search])
+    return sortRows(list, sortCol, sortDir, CLIENT_COLUMNS)
+  }, [ranking, sortCol, sortDir, search])
 
   const totalValor = ranking.reduce((s, c) => s + c.valor, 0)
   const totalNotas = ranking.reduce((s, c) => s + c.qtd, 0)
@@ -234,31 +244,27 @@ export default function ClientsPanel({ data }) {
             fontSize: '0.8125rem', color: 'var(--text)', flex: 1, minWidth: 220,
           }}
         />
-        <div style={{ display: 'flex', gap: '0.4rem' }}>
-          {[
-            { key: 'valor', label: 'Por Valor' },
-            { key: 'dias',  label: 'Por Tempo' },
-            { key: 'qtd',   label: 'Por Qtd'   },
-          ].map(({ key, label }) => (
-            <button
-              key={key}
-              onClick={() => setSortBy(key)}
-              style={{
-                fontSize: '0.75rem', fontWeight: 600, padding: '0.4rem 0.85rem',
-                borderRadius: 'var(--radius-sm)',
-                border: `1.5px solid ${sortBy === key ? 'var(--accent)' : 'var(--border)'}`,
-                background: sortBy === key ? '#F7F2EC' : 'var(--surface)',
-                color: sortBy === key ? 'var(--accent-dark)' : 'var(--text-2)',
-                cursor: 'pointer',
-              }}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
         <span style={{ fontSize: '0.75rem', color: 'var(--text-2)', whiteSpace: 'nowrap' }}>
           {sorted.length} clientes
         </span>
+        <ExportButton
+          onClick={() => exportTableToExcel(
+            sorted,
+            [
+              { header: 'Cliente', accessor: c => c.cliente },
+              { header: 'Loja(s)', accessor: c => c.lojas.join(', ') },
+              { header: 'Consultora', accessor: c => c.consultoras.join(', ') },
+              { header: 'Notas', accessor: c => c.qtd },
+              { header: 'Valor Pendente', accessor: c => c.valor },
+              { header: 'Nota mais antiga', accessor: c => c.notaMaisAntiga ? fmtDate(c.notaMaisAntiga) : '' },
+              { header: 'Dias em aberto', accessor: c => c.diasMaximo ?? '' },
+            ],
+            'clientes.xlsx',
+            'Clientes'
+          )}
+        >
+          Exportar Excel
+        </ExportButton>
       </div>
 
       {/* Tabela de clientes */}
@@ -271,21 +277,20 @@ export default function ClientsPanel({ data }) {
           <thead>
             <tr>
               <th>#</th>
-              <th>Cliente</th>
-              <th>Loja(s)</th>
-              <th>Consultora</th>
-              <th className="right">Notas</th>
-              <th className="right">Valor Pendente</th>
-              <th className="right">Nota mais antiga</th>
-              <th className="right">Dias em aberto</th>
+              <SortableTh col="cliente"        label="Cliente"          sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
+              <SortableTh col="lojas"          label="Loja(s)"          sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
+              <SortableTh col="consultoras"    label="Consultora"       sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
+              <SortableTh col="qtd"            label="Notas"            sortCol={sortCol} sortDir={sortDir} onSort={onSort} className="right" />
+              <SortableTh col="valor"          label="Valor Pendente"   sortCol={sortCol} sortDir={sortDir} onSort={onSort} className="right" />
+              <SortableTh col="notaMaisAntiga" label="Nota mais antiga" sortCol={sortCol} sortDir={sortDir} onSort={onSort} className="right" />
+              <SortableTh col="dias"           label="Dias em aberto"   sortCol={sortCol} sortDir={sortDir} onSort={onSort} className="right" />
               <th />
             </tr>
           </thead>
           <tbody>
             {sorted.map((c, i) => (
-              <>
+              <Fragment key={c.cliente}>
                 <tr
-                  key={c.cliente}
                   style={{ cursor: 'pointer', background: expanded === c.cliente ? '#FEF8F6' : undefined }}
                   onClick={() => setExpanded(e => e === c.cliente ? null : c.cliente)}
                 >
@@ -370,7 +375,7 @@ export default function ClientsPanel({ data }) {
                     </td>
                   </tr>
                 )}
-              </>
+              </Fragment>
             ))}
           </tbody>
         </table>

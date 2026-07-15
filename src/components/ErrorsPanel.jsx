@@ -3,6 +3,20 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts'
 import { getErrorSummary, fmtBRL, fmtInt, fmtDate } from '../utils/dataProcessing.js'
+import { SortableTh, useSortableTable, sortRows } from '../utils/sortableTable.jsx'
+import { exportSheetsToExcel } from '../utils/exportExcel.js'
+import ExportButton from './ExportButton.jsx'
+
+const DETAIL_COLUMNS = {
+  nf:         r => r['NF'],
+  especie:    r => r['Espécie'] || '',
+  loja:       r => r['Loja'] || '',
+  dataEmissao: r => r._dataEmissao instanceof Date ? r._dataEmissao.getTime() : 0,
+  cliente:    r => r['Nome da Cliente'] || '',
+  consultora: r => r['Nome da Consultora'] || '',
+  valor:      r => r._valor,
+  erro:       r => r['Anotações'] || '',
+}
 
 const ERROR_COLORS = [
   '#D14B3A', '#E5912A', '#C9B99A', '#7A6A5A', '#A09E9C',
@@ -42,7 +56,7 @@ export default function ErrorsPanel({ data }) {
   const summary = useMemo(() => getErrorSummary(data), [data])
   const [activeType, setActiveType] = useState(null)
   const [search, setSearch]         = useState('')
-  const [sortDir, setSortDir]       = useState('desc') // 'desc' | 'asc' por valor
+  const { sortCol, sortDir, onSort } = useSortableTable('valor', 'desc')
 
   // Linhas filtradas + ordenadas
   const filteredRows = useMemo(() => {
@@ -62,10 +76,8 @@ export default function ErrorsPanel({ data }) {
         (r['Loja'] || '').toLowerCase().includes(s)
       )
     }
-    return [...rows].sort((a, b) =>
-      sortDir === 'desc' ? b._valor - a._valor : a._valor - b._valor
-    )
-  }, [summary.rows, activeType, search, sortDir])
+    return sortRows(rows, sortCol, sortDir, DETAIL_COLUMNS)
+  }, [summary.rows, activeType, search, sortCol, sortDir])
 
   if (summary.total === 0) {
     return (
@@ -219,15 +231,39 @@ export default function ErrorsPanel({ data }) {
           onChange={e => setSearch(e.target.value)}
           style={{ padding: '0.45rem 0.85rem', borderRadius: 'var(--radius-sm)', border: '1.5px solid var(--border)', background: 'var(--surface)', fontSize: '0.8125rem', flex: 1, minWidth: 200 }}
         />
-        <button
-          onClick={() => setSortDir(d => d === 'desc' ? 'asc' : 'desc')}
-          style={{ fontSize: '0.75rem', fontWeight: 600, padding: '0.4rem 0.85rem', borderRadius: 'var(--radius-sm)', border: '1.5px solid var(--border)', background: 'var(--surface)', color: 'var(--text-2)', cursor: 'pointer', whiteSpace: 'nowrap' }}
-        >
-          Valor {sortDir === 'desc' ? '▼ Maior → Menor' : '▲ Menor → Maior'}
-        </button>
         <span style={{ fontSize: '0.75rem', color: 'var(--text-2)', whiteSpace: 'nowrap' }}>
           {fmtInt(filteredRows.length)} notas · {fmtBRL(filteredRows.reduce((s, r) => s + r._valor, 0))}
         </span>
+        <ExportButton
+          onClick={() => exportSheetsToExcel([
+            {
+              name: 'Resumo por Tipo',
+              rows: summary.byType,
+              columns: [
+                { header: 'Tipo de Erro', accessor: r => r.tipo },
+                { header: 'Qtd', accessor: r => r.count },
+                { header: 'Valor', accessor: r => r.valor },
+                { header: 'Lojas Afetadas', accessor: r => r.lojas },
+              ],
+            },
+            {
+              name: 'Detalhamento',
+              rows: filteredRows,
+              columns: [
+                { header: 'NF', accessor: r => r['NF'] },
+                { header: 'Espécie', accessor: r => r['Espécie'] || '' },
+                { header: 'Loja', accessor: r => r['Loja'] || '' },
+                { header: 'Data Emissão', accessor: r => fmtDate(r['Data Emissão']) },
+                { header: 'Cliente', accessor: r => r['Nome da Cliente'] || '' },
+                { header: 'Consultora', accessor: r => r['Nome da Consultora'] || '' },
+                { header: 'Valor', accessor: r => r._valor },
+                { header: 'Erro', accessor: r => r['Anotações'] || '' },
+              ],
+            },
+          ], 'erros.xlsx')}
+        >
+          Exportar Excel
+        </ExportButton>
       </div>
       <div style={{
         background: 'var(--surface)', borderRadius: 'var(--radius)',
@@ -237,14 +273,14 @@ export default function ErrorsPanel({ data }) {
         <table>
           <thead>
             <tr>
-              <th>NF</th>
-              <th>Espécie</th>
-              <th>Loja</th>
-              <th>Data Emissão</th>
-              <th>Cliente</th>
-              <th>Consultora</th>
-              <th className="right">Valor</th>
-              <th>Erro</th>
+              <SortableTh col="nf"          label="NF"           sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
+              <SortableTh col="especie"     label="Espécie"      sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
+              <SortableTh col="loja"        label="Loja"         sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
+              <SortableTh col="dataEmissao" label="Data Emissão" sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
+              <SortableTh col="cliente"     label="Cliente"      sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
+              <SortableTh col="consultora"  label="Consultora"   sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
+              <SortableTh col="valor"       label="Valor"        sortCol={sortCol} sortDir={sortDir} onSort={onSort} className="right" />
+              <SortableTh col="erro"        label="Erro"         sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
             </tr>
           </thead>
           <tbody>

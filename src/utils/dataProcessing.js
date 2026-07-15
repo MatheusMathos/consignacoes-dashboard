@@ -465,3 +465,78 @@ export function getStoreRanking(rows) {
     .map(e => ({ ...e, saldo: e.saidas - e.entradas }))
     .sort((a, b) => b.valorPendente - a.valorPendente)
 }
+
+// ─── Insights de atraso por loja (para o resumo em Word) ─────────────────────
+// Compara a taxa de pendência (SEM RETORNO / Saídas) dos meses mais recentes
+// contra os meses anteriores, por loja, para identificar quem mais atrasa
+// o retorno de NFs hoje e quem mostrou melhora real ao longo do tempo.
+export function getStoreDelayInsights(rows, { minVolume = 15, minRecentVolume = 10, recentMonths = 2 } = {}) {
+  const monthKeys = [...new Set(
+    rows.filter(r => r._dataEmissao).map(r => {
+      const d = r._dataEmissao
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    })
+  )].sort()
+
+  const recentKeys = new Set(monthKeys.slice(-recentMonths))
+  const olderKeys = new Set(monthKeys.slice(0, -recentMonths))
+
+  const byLoja = {}
+  for (const r of rows) {
+    if (r._especie !== 'SAIDA' || !r._dataEmissao) continue
+    const loja = r['Loja'] || 'Sem loja'
+    const key = `${r._dataEmissao.getFullYear()}-${String(r._dataEmissao.getMonth() + 1).padStart(2, '0')}`
+    if (!byLoja[loja]) byLoja[loja] = { recent: { saidas: 0, pendentes: 0 }, older: { saidas: 0, pendentes: 0 } }
+    const bucket = recentKeys.has(key) ? byLoja[loja].recent : olderKeys.has(key) ? byLoja[loja].older : null
+    if (!bucket) continue
+    bucket.saidas++
+    if (r._anotacao === 'SEM RETORNO' || r._anotacao === 'NF SEM RETORNO') bucket.pendentes++
+  }
+
+  const stats = Object.entries(byLoja).map(([loja, { recent, older }]) => ({
+    loja,
+    totalSaidas: recent.saidas + older.saidas,
+    recentSaidas: recent.saidas,
+    recentPendentes: recent.pendentes,
+    recentRate: recent.saidas ? recent.pendentes / recent.saidas : 0,
+    olderSaidas: older.saidas,
+    olderRate: older.saidas ? older.pendentes / older.saidas : null,
+  }))
+
+  // Loja que mais atrasa hoje: maior taxa de pendência no período recente (com volume mínimo)
+  const worst = stats
+    .filter(s => s.recentSaidas >= minRecentVolume)
+    .sort((a, b) => b.recentRate - a.recentRate)[0] || null
+
+  // Loja com melhora significativa: tinha taxa alta antes e caiu para menos da metade
+  const improved = stats
+    .filter(s => s.totalSaidas >= minVolume && s.olderRate != null && s.olderRate >= 0.10 && s.recentRate <= s.olderRate * 0.5)
+    .sort((a, b) => (b.olderRate - b.recentRate) - (a.olderRate - a.recentRate))[0] || null
+
+  return { worst, improved, stats, recentMonthKeys: [...recentKeys].sort() }
+}
+
+// ─── Qualidade do preenchimento no PDV (Cliente/Consultora) por loja ────────
+// Mede, por loja, a proporção de Saídas sem "Nome da Cliente" e/ou
+// "Nome da Consultora" preenchidos — indício de que a loja não está
+// identificando a venda corretamente no PDV.
+export function getMissingPDVDataByStore(rows, { minVolume = 15 } = {}) {
+  const byLoja = {}
+  for (const r of rows) {
+    if (r._especie !== 'SAIDA') continue
+    const loja = r['Loja'] || 'Sem loja'
+    if (!byLoja[loja]) byLoja[loja] = { loja, total: 0, semCliente: 0, semConsultora: 0 }
+    const s = byLoja[loja]
+    s.total++
+    if (!String(r['Nome da Cliente'] || '').trim()) s.semCliente++
+    if (!String(r['Nome da Consultora'] || '').trim()) s.semConsultora++
+  }
+  return Object.values(byLoja)
+    .map(s => ({
+      ...s,
+      pctSemCliente: s.total ? s.semCliente / s.total : 0,
+      pctSemConsultora: s.total ? s.semConsultora / s.total : 0,
+    }))
+    .filter(s => s.total >= minVolume)
+    .sort((a, b) => b.pctSemConsultora - a.pctSemConsultora)
+}

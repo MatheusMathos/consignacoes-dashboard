@@ -3,6 +3,18 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from 'recharts'
 import { getStoreRanking, fmtBRL, fmtInt } from '../utils/dataProcessing.js'
+import { SortableTh, useSortableTable, sortRows } from '../utils/sortableTable.jsx'
+import { exportTableToExcel } from '../utils/exportExcel.js'
+import ExportButton from './ExportButton.jsx'
+
+const RANKING_COLUMNS = {
+  loja:          r => r.loja,
+  saidas:        r => r.saidas,
+  entradas:      r => r.entradas,
+  saldo:         r => r.saldo,
+  pendentes:     r => r.pendentes,
+  valorPendente: r => r.valorPendente,
+}
 
 function SectionTitle({ children }) {
   return (
@@ -35,6 +47,11 @@ function CustomTooltip({ active, payload, label }) {
 
 export default function StoreRanking({ data }) {
   const ranking = useMemo(() => getStoreRanking(data), [data])
+  const { sortCol, sortDir, onSort } = useSortableTable('valorPendente', 'desc')
+  const sortedRanking = useMemo(
+    () => sortRows(ranking, sortCol, sortDir, RANKING_COLUMNS),
+    [ranking, sortCol, sortDir]
+  )
 
   const chartData = ranking.slice(0, 10).map(r => ({
     name: r.loja.length > 22 ? r.loja.slice(0, 20) + '…' : r.loja,
@@ -107,6 +124,25 @@ export default function StoreRanking({ data }) {
       </div>
 
       <SectionTitle>Tabela Completa</SectionTitle>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.75rem' }}>
+        <ExportButton
+          onClick={() => exportTableToExcel(
+            sortedRanking,
+            [
+              { header: 'Loja', accessor: r => r.loja },
+              { header: 'Saídas (R$)', accessor: r => r.saidas },
+              { header: 'Retornos (R$)', accessor: r => r.entradas },
+              { header: 'Saldo', accessor: r => r.saldo },
+              { header: 'Qtd Pendente', accessor: r => r.pendentes },
+              { header: 'Valor Pendente', accessor: r => r.valorPendente },
+            ],
+            'ranking_lojas.xlsx',
+            'Ranking Lojas'
+          )}
+        >
+          Exportar Excel
+        </ExportButton>
+      </div>
       <div style={{
         background: 'var(--surface)', borderRadius: 'var(--radius)',
         border: '1px solid var(--border)', boxShadow: 'var(--shadow)',
@@ -116,16 +152,16 @@ export default function StoreRanking({ data }) {
           <thead>
             <tr>
               <th>#</th>
-              <th>Loja</th>
-              <th className="right">Saídas (R$)</th>
-              <th className="right">Retornos (R$)</th>
-              <th className="right">Saldo</th>
-              <th className="right">Qtd Pendente</th>
-              <th className="right">Valor Pendente</th>
+              <SortableTh col="loja"          label="Loja"            sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
+              <SortableTh col="saidas"        label="Saídas (R$)"     sortCol={sortCol} sortDir={sortDir} onSort={onSort} className="right" />
+              <SortableTh col="entradas"      label="Retornos (R$)"   sortCol={sortCol} sortDir={sortDir} onSort={onSort} className="right" />
+              <SortableTh col="saldo"         label="Saldo"           sortCol={sortCol} sortDir={sortDir} onSort={onSort} className="right" />
+              <SortableTh col="pendentes"     label="Qtd Pendente"    sortCol={sortCol} sortDir={sortDir} onSort={onSort} className="right" />
+              <SortableTh col="valorPendente" label="Valor Pendente"  sortCol={sortCol} sortDir={sortDir} onSort={onSort} className="right" />
             </tr>
           </thead>
           <tbody>
-            {ranking.map(({ loja, saidas, entradas, saldo, pendentes, valorPendente }, i) => (
+            {sortedRanking.map(({ loja, saidas, entradas, saldo, pendentes, valorPendente }, i) => (
               <tr key={loja}>
                 <td className="muted">{i + 1}</td>
                 <td style={{ fontWeight: 600 }}>{loja}</td>

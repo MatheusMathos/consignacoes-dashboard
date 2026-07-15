@@ -5,6 +5,20 @@ import {
 import {
   computeKPIs, computeMonthSummaryTable, fmtBRL, fmtInt, MONTHS_PT,
 } from '../utils/dataProcessing.js'
+import { SortableTh, useSortableTable, sortRows } from '../utils/sortableTable.jsx'
+import { exportTableToExcel } from '../utils/exportExcel.js'
+import { exportOverviewWord } from '../utils/exportWord.js'
+import ExportButton from './ExportButton.jsx'
+
+const SUMMARY_COLUMNS = {
+  key:               s => s.key,
+  valorSaidas:       s => s.valorSaidas,
+  valorEntradas:     s => s.valorEntradas,
+  valorRetMesAnterior: s => s.valorRetMesAnterior,
+  pendenteCount:     s => s.pendenteCount,
+  valorPendentes:    s => s.valorPendentes,
+  saldoReal:         s => s.saldoReal,
+}
 
 function Card({ label, value, sub, color = 'var(--accent)', small = false }) {
   return (
@@ -35,41 +49,26 @@ function CustomTooltip({ active, payload, label }) {
   )
 }
 
-// Cabeçalho de coluna clicável para ordenação
-function SortTh({ col, label, sortCol, sortDir, onSort, className }) {
-  const active = sortCol === col
-  return (
-    <th className={className}
-      onClick={() => onSort(col)}
-      style={{ cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}
-    >
-      {label}{' '}
-      <span style={{ opacity: active ? 1 : 0.3, fontSize: '0.65rem' }}>
-        {active ? (sortDir === 'asc' ? '▲' : '▼') : '▼'}
-      </span>
-    </th>
-  )
-}
-
 export default function KPICards({ data }) {
   const kpis    = useMemo(() => computeKPIs(data), [data])
   const summary = useMemo(() => computeMonthSummaryTable(data), [data])
+  const [exportingWord, setExportingWord] = useState(false)
 
-  const [sortCol, setSortCol] = useState('key')   // default: ordem cronológica
-  const [sortDir, setSortDir] = useState('asc')
-
-  const handleSort = col => {
-    if (sortCol === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
-    else { setSortCol(col); setSortDir('desc') }
+  const handleExportWord = async () => {
+    setExportingWord(true)
+    try {
+      await exportOverviewWord(data)
+    } finally {
+      setExportingWord(false)
+    }
   }
 
-  const sortedSummary = useMemo(() => {
-    return [...summary].sort((a, b) => {
-      let va = a[sortCol], vb = b[sortCol]
-      if (typeof va === 'string') return sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va)
-      return sortDir === 'asc' ? va - vb : vb - va
-    })
-  }, [summary, sortCol, sortDir])
+  const { sortCol, sortDir, onSort } = useSortableTable('key', 'asc') // default: ordem cronológica
+
+  const sortedSummary = useMemo(
+    () => sortRows(summary, sortCol, sortDir, SUMMARY_COLUMNS),
+    [summary, sortCol, sortDir]
+  )
 
   const chartData = summary.map(s => ({
     name: `${MONTHS_PT[s.month].slice(0, 3)} ${String(s.year).slice(2)}`,
@@ -80,7 +79,12 @@ export default function KPICards({ data }) {
 
   return (
     <div className="fade-in">
-      <SectionTitle>Visão Geral</SectionTitle>
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <SectionTitle style={{ flex: 1, minWidth: 160 }}>Visão Geral</SectionTitle>
+        <ExportButton variant="word" onClick={handleExportWord}>
+          {exportingWord ? 'Gerando...' : 'Exportar Word Visão Geral'}
+        </ExportButton>
+      </div>
       <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.75rem' }}>
         <Card label="Total de Registros" value={fmtInt(kpis.total)} />
         <Card label="Saídas"      value={fmtBRL(kpis.valorSaidas)}  sub={`${fmtInt(kpis.saidaCount)} notas`} />
@@ -117,17 +121,37 @@ export default function KPICards({ data }) {
       </div>
 
       <SectionTitle>Resumo por Mês</SectionTitle>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.75rem' }}>
+        <ExportButton
+          onClick={() => exportTableToExcel(
+            sortedSummary,
+            [
+              { header: 'Mês', accessor: s => s.label },
+              { header: 'Saídas (R$)', accessor: s => s.valorSaidas },
+              { header: 'Retornos (R$)', accessor: s => s.valorEntradas },
+              { header: 'NF Mês Ant.', accessor: s => s.valorRetMesAnterior },
+              { header: 'Pendentes', accessor: s => s.pendenteCount },
+              { header: 'Valor Pendente', accessor: s => s.valorPendentes },
+              { header: 'Saldo', accessor: s => s.saldoReal },
+            ],
+            'resumo_geral.xlsx',
+            'Resumo por Mês'
+          )}
+        >
+          Exportar Excel
+        </ExportButton>
+      </div>
       <div style={{ background: 'var(--surface)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)', overflow: 'auto' }}>
         <table>
           <thead>
             <tr>
-              <SortTh col="key"           label="Mês"            sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
-              <SortTh col="valorSaidas"   label="Saídas (R$)"    sortCol={sortCol} sortDir={sortDir} onSort={handleSort} className="right" />
-              <SortTh col="valorEntradas" label="Retornos (R$)"  sortCol={sortCol} sortDir={sortDir} onSort={handleSort} className="right" />
-              <SortTh col="valorRetMesAnterior" label="NF Mês Ant." sortCol={sortCol} sortDir={sortDir} onSort={handleSort} className="right" />
-              <SortTh col="pendenteCount" label="Pendentes"      sortCol={sortCol} sortDir={sortDir} onSort={handleSort} className="right" />
-              <SortTh col="valorPendentes" label="Valor Pendente" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} className="right" />
-              <SortTh col="saldoReal"     label="Saldo"          sortCol={sortCol} sortDir={sortDir} onSort={handleSort} className="right" />
+              <SortableTh col="key"           label="Mês"            sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
+              <SortableTh col="valorSaidas"   label="Saídas (R$)"    sortCol={sortCol} sortDir={sortDir} onSort={onSort} className="right" />
+              <SortableTh col="valorEntradas" label="Retornos (R$)"  sortCol={sortCol} sortDir={sortDir} onSort={onSort} className="right" />
+              <SortableTh col="valorRetMesAnterior" label="NF Mês Ant." sortCol={sortCol} sortDir={sortDir} onSort={onSort} className="right" />
+              <SortableTh col="pendenteCount" label="Pendentes"      sortCol={sortCol} sortDir={sortDir} onSort={onSort} className="right" />
+              <SortableTh col="valorPendentes" label="Valor Pendente" sortCol={sortCol} sortDir={sortDir} onSort={onSort} className="right" />
+              <SortableTh col="saldoReal"     label="Saldo"          sortCol={sortCol} sortDir={sortDir} onSort={onSort} className="right" />
             </tr>
           </thead>
           <tbody>
@@ -157,9 +181,9 @@ export default function KPICards({ data }) {
   )
 }
 
-function SectionTitle({ children }) {
+function SectionTitle({ children, style }) {
   return (
-    <h2 style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--text-2)', marginBottom: '0.9rem', paddingBottom: '0.6rem', borderBottom: '1px solid var(--border)' }}>
+    <h2 style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--text-2)', marginBottom: '0.9rem', paddingBottom: '0.6rem', borderBottom: '1px solid var(--border)', ...style }}>
       {children}
     </h2>
   )

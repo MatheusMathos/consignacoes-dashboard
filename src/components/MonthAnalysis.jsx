@@ -4,6 +4,18 @@ import {
   getAvailableMonths, analyzeMonth,
   fmtBRL, fmtInt, fmtMonth, fmtDate, MONTHS_PT,
 } from '../utils/dataProcessing.js'
+import { SortableTh, useSortableTable, sortRows } from '../utils/sortableTable.jsx'
+import { exportTableToExcel } from '../utils/exportExcel.js'
+import ExportButton from './ExportButton.jsx'
+
+const PEND_COLUMNS = {
+  nf:         r => r['NF'],
+  loja:       r => r['Loja'] || '',
+  cliente:    r => r['Nome da Cliente'] || '',
+  consultora: r => String(r['Nome da Consultora'] || '').trim(),
+  valor:      r => r._valor,
+  anotacao:   r => r['Anotações'] || '',
+}
 
 function SectionTitle({ children }) {
   return (
@@ -33,7 +45,7 @@ export default function MonthAnalysis({ data }) {
   const months = useMemo(() => getAvailableMonths(data), [data])
   const [selectedKey, setSelectedKey] = useState(months[months.length - 1]?.key || '')
   const [showTable, setShowTable] = useState(false)
-  const [pendSort, setPendSort] = useState('desc') // 'desc' | 'asc'
+  const { sortCol, sortDir, onSort } = useSortableTable('valor', 'desc')
 
   const selected = useMemo(
     () => months.find(m => m.key === selectedKey),
@@ -260,24 +272,28 @@ export default function MonthAnalysis({ data }) {
               {showTable ? '▲ Ocultar' : '▼ Ver'} notas com SEM RETORNO ({pendenteCount})
             </button>
             {showTable && (
-              <button
-                onClick={() => setPendSort(s => s === 'desc' ? 'asc' : 'desc')}
-                style={{
-                  fontSize: '0.75rem', fontWeight: 600,
-                  padding: '0.4rem 0.85rem', borderRadius: 'var(--radius-sm)',
-                  border: '1.5px solid var(--border)', background: 'var(--surface)',
-                  color: 'var(--text-2)', cursor: 'pointer',
-                }}
+              <ExportButton
+                onClick={() => exportTableToExcel(
+                  sortRows(pendentesRows, sortCol, sortDir, PEND_COLUMNS),
+                  [
+                    { header: 'NF', accessor: r => r['NF'] },
+                    { header: 'Loja', accessor: r => r['Loja'] || '' },
+                    { header: 'Cliente', accessor: r => r['Nome da Cliente'] || '' },
+                    { header: 'Consultora', accessor: r => String(r['Nome da Consultora'] || '').trim() },
+                    { header: 'Valor', accessor: r => r._valor },
+                    { header: 'Anotação', accessor: r => r['Anotações'] || '' },
+                  ],
+                  `sem_retorno_${fmtMonth(year, month).replace(' de ', '_')}.xlsx`,
+                  'Sem Retorno'
+                )}
               >
-                Valor {pendSort === 'desc' ? '▼ Maior → Menor' : '▲ Menor → Maior'}
-              </button>
+                Exportar Excel
+              </ExportButton>
             )}
           </div>
 
           {showTable && (() => {
-            const sorted = [...pendentesRows].sort((a, b) =>
-              pendSort === 'desc' ? b._valor - a._valor : a._valor - b._valor
-            )
+            const sorted = sortRows(pendentesRows, sortCol, sortDir, PEND_COLUMNS)
             return (
               <div style={{
                 background: 'var(--surface)', borderRadius: 'var(--radius)',
@@ -287,12 +303,12 @@ export default function MonthAnalysis({ data }) {
                 <table>
                   <thead>
                     <tr>
-                      <th>NF</th>
-                      <th>Loja</th>
-                      <th>Cliente</th>
-                      <th>Consultora</th>
-                      <th className="right">Valor</th>
-                      <th>Anotação</th>
+                      <SortableTh col="nf"         label="NF"         sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
+                      <SortableTh col="loja"       label="Loja"       sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
+                      <SortableTh col="cliente"    label="Cliente"    sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
+                      <SortableTh col="consultora" label="Consultora" sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
+                      <SortableTh col="valor"      label="Valor"      sortCol={sortCol} sortDir={sortDir} onSort={onSort} className="right" />
+                      <SortableTh col="anotacao"   label="Anotação"   sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
                     </tr>
                   </thead>
                   <tbody>

@@ -1,5 +1,19 @@
 import { useMemo, useState } from 'react'
 import { getAllNoReturn, fmtBRL, fmtInt, MONTHS_PT } from '../utils/dataProcessing.js'
+import { SortableTh, useSortableTable, sortRows } from '../utils/sortableTable.jsx'
+import { exportTableToExcel } from '../utils/exportExcel.js'
+import ExportButton from './ExportButton.jsx'
+
+const DETAIL_COLUMNS = {
+  nf:         r => r.nf,
+  loja:       r => r.loja || '',
+  dataEmissao: r => r.dataEmissao ? r.dataEmissao.getTime() : 0,
+  dias:       r => r.diasPendente ?? 0,
+  cliente:    r => r.cliente || '',
+  consultora: r => r.consultora || '',
+  valor:      r => r.valor,
+  status:     r => r.anotacao || '',
+}
 
 const STATUS_COLORS = {
   'SEM RETORNO':    { bg: '#FEF0EE', color: '#D14B3A' },
@@ -55,6 +69,7 @@ export default function NoReturnPanel({ data }) {
   const [toMonth, setToMonth]     = useState('')
   const [lojaFilter, setLojaFilter] = useState('Todas')
   const [search, setSearch]         = useState('')
+  const { sortCol, sortDir, onSort } = useSortableTable('dias', 'desc')
 
   // Usa default se o usuário não escolheu
   const effectiveFrom = fromMonth || defaultFrom
@@ -81,7 +96,7 @@ export default function NoReturnPanel({ data }) {
   }, [rows])
 
   const filtered = useMemo(() => {
-    return rows.filter(r => {
+    const base = rows.filter(r => {
       if (lojaFilter !== 'Todas' && r.loja !== lojaFilter) return false
       if (search) {
         const s = search.toLowerCase()
@@ -93,7 +108,8 @@ export default function NoReturnPanel({ data }) {
       }
       return true
     })
-  }, [rows, lojaFilter, search])
+    return sortRows(base, sortCol, sortDir, DETAIL_COLUMNS)
+  }, [rows, lojaFilter, search, sortCol, sortDir])
 
   const totalValor = filtered.reduce((s, r) => s + r.valor, 0)
 
@@ -227,20 +243,39 @@ export default function NoReturnPanel({ data }) {
         <span style={{ fontSize: '0.75rem', color: 'var(--text-2)', whiteSpace: 'nowrap' }}>
           {fmtInt(filtered.length)} notas · {fmtBRL(totalValor)}
         </span>
+        <ExportButton
+          onClick={() => exportTableToExcel(
+            filtered,
+            [
+              { header: 'NF', accessor: r => r.nf },
+              { header: 'Loja', accessor: r => r.loja || '' },
+              { header: 'Data Emissão', accessor: r => r.dataEmissaoStr || '' },
+              { header: 'Dias Pendente', accessor: r => r.diasPendente ?? '' },
+              { header: 'Cliente', accessor: r => r.cliente || '' },
+              { header: 'Consultora', accessor: r => r.consultora || '' },
+              { header: 'Valor', accessor: r => r.valor },
+              { header: 'Status', accessor: r => r.anotacao || '' },
+            ],
+            'sem_devolucao_detalhamento.xlsx',
+            'Sem Devolução'
+          )}
+        >
+          Exportar Excel
+        </ExportButton>
       </div>
 
       <div style={{ background: 'var(--surface)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)', overflow: 'auto', maxHeight: 520 }}>
         <table>
           <thead>
             <tr>
-              <th>NF</th>
-              <th>Loja</th>
-              <th>Data Emissão</th>
-              <th>Dias Pendente</th>
-              <th>Cliente</th>
-              <th>Consultora</th>
-              <th className="right">Valor</th>
-              <th>Status</th>
+              <SortableTh col="nf"         label="NF"             sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
+              <SortableTh col="loja"       label="Loja"           sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
+              <SortableTh col="dataEmissao" label="Data Emissão"  sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
+              <SortableTh col="dias"       label="Dias Pendente"  sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
+              <SortableTh col="cliente"    label="Cliente"        sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
+              <SortableTh col="consultora" label="Consultora"     sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
+              <SortableTh col="valor"      label="Valor"          sortCol={sortCol} sortDir={sortDir} onSort={onSort} className="right" />
+              <SortableTh col="status"     label="Status"         sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
             </tr>
           </thead>
           <tbody>
