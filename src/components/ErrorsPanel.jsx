@@ -5,6 +5,7 @@ import {
 import { getErrorSummary, fmtBRL, fmtInt, fmtDate } from '../utils/dataProcessing.js'
 import { SortableTh, useSortableTable, sortRows } from '../utils/sortableTable.jsx'
 import { exportSheetsToExcel } from '../utils/exportExcel.js'
+import { useIsMobile } from '../utils/useMediaQuery.js'
 import ExportButton from './ExportButton.jsx'
 
 const DETAIL_COLUMNS = {
@@ -54,6 +55,7 @@ function CustomTooltip({ active, payload, label }) {
 
 export default function ErrorsPanel({ data }) {
   const summary = useMemo(() => getErrorSummary(data), [data])
+  const isMobile = useIsMobile()
   const [activeType, setActiveType] = useState(null)
   const [search, setSearch]         = useState('')
   const { sortCol, sortDir, onSort } = useSortableTable('valor', 'desc')
@@ -91,8 +93,9 @@ export default function ErrorsPanel({ data }) {
   }
 
   // Dados do gráfico (top 8 por valor)
+  const nameMax = isMobile ? 14 : 28
   const chartData = summary.byType.slice(0, 8).map((e, i) => ({
-    name: e.tipo.length > 28 ? e.tipo.slice(0, 26) + '…' : e.tipo,
+    name: e.tipo.length > nameMax ? e.tipo.slice(0, nameMax - 2) + '…' : e.tipo,
     fullName: e.tipo,
     valor: e.valor,
     color: ERROR_COLORS[i % ERROR_COLORS.length],
@@ -105,7 +108,7 @@ export default function ErrorsPanel({ data }) {
         <div style={{
           background: 'var(--surface)', border: '1px solid var(--border)',
           borderTop: '3px solid var(--danger)', borderRadius: 'var(--radius)',
-          padding: '1.25rem', flex: 1, minWidth: 160, boxShadow: 'var(--shadow)',
+          padding: '1.25rem', flex: '1 1 160px', minWidth: 160, boxShadow: 'var(--shadow)', overflow: 'hidden',
         }}>
           <div style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--text-2)', marginBottom: '0.4rem' }}>
             Total de Erros
@@ -116,19 +119,19 @@ export default function ErrorsPanel({ data }) {
         <div style={{
           background: 'var(--surface)', border: '1px solid var(--border)',
           borderTop: '3px solid var(--warning)', borderRadius: 'var(--radius)',
-          padding: '1.25rem', flex: 1, minWidth: 200, boxShadow: 'var(--shadow)',
+          padding: '1.25rem', flex: '1 1 200px', minWidth: 200, boxShadow: 'var(--shadow)', overflow: 'hidden',
         }}>
           <div style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--text-2)', marginBottom: '0.4rem' }}>
             Valor Total em Erros
           </div>
-          <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--warning)', fontVariantNumeric: 'tabular-nums' }}>
+          <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--warning)', fontVariantNumeric: 'tabular-nums', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {fmtBRL(summary.totalValor)}
           </div>
         </div>
         <div style={{
           background: 'var(--surface)', border: '1px solid var(--border)',
           borderTop: '3px solid var(--info)', borderRadius: 'var(--radius)',
-          padding: '1.25rem', flex: 1, minWidth: 160, boxShadow: 'var(--shadow)',
+          padding: '1.25rem', flex: '1 1 160px', minWidth: 160, boxShadow: 'var(--shadow)', overflow: 'hidden',
         }}>
           <div style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--text-2)', marginBottom: '0.4rem' }}>
             Tipos de Erro
@@ -149,7 +152,7 @@ export default function ErrorsPanel({ data }) {
           <BarChart data={chartData} layout="vertical" margin={{ left: 0, right: 20 }}>
             <XAxis type="number" tickFormatter={v => `R$ ${(v/1000).toFixed(0)}k`}
               tick={{ fontSize: 11, fill: 'var(--text-2)' }} axisLine={false} tickLine={false} />
-            <YAxis type="category" dataKey="name" width={190}
+            <YAxis type="category" dataKey="name" width={isMobile ? 100 : 190}
               tick={{ fontSize: 11, fill: 'var(--text-2)' }} axisLine={false} tickLine={false} />
             <Tooltip content={<CustomTooltip />} />
             <Bar dataKey="valor" radius={[0,4,4,0]} barSize={18}>

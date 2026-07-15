@@ -5,6 +5,7 @@ import {
 import { getClientRanking, fmtBRL, fmtInt, fmtDate } from '../utils/dataProcessing.js'
 import { SortableTh, useSortableTable, sortRows } from '../utils/sortableTable.jsx'
 import { exportTableToExcel } from '../utils/exportExcel.js'
+import { useIsMobile } from '../utils/useMediaQuery.js'
 import ExportButton from './ExportButton.jsx'
 
 const CLIENT_COLUMNS = {
@@ -71,6 +72,7 @@ function fromMonthVal(str) {
 
 export default function ClientsPanel({ data }) {
   const allRanking = useMemo(() => getClientRanking(data), [data])
+  const isMobile = useIsMobile()
 
   // Datas mín/máx das notas
   const { minDate, maxDate } = useMemo(() => {
@@ -135,11 +137,12 @@ export default function ClientsPanel({ data }) {
   const totalNotas = ranking.reduce((s, c) => s + c.qtd, 0)
   const maxDias    = ranking.reduce((m, c) => Math.max(m, c.diasMaximo ?? 0), 0)
 
+  const nameMax = isMobile ? 12 : 20
   const chartData = [...ranking]
     .sort((a, b) => b.valor - a.valor)
     .slice(0, 8)
     .map(c => ({
-      name: c.cliente.length > 20 ? c.cliente.slice(0, 18) + '…' : c.cliente,
+      name: c.cliente.length > nameMax ? c.cliente.slice(0, nameMax - 2) + '…' : c.cliente,
       fullName: c.cliente,
       Valor: c.valor,
     }))
@@ -220,7 +223,7 @@ export default function ClientsPanel({ data }) {
           <BarChart data={chartData} layout="vertical" margin={{ left: 0, right: 20 }}>
             <XAxis type="number" tickFormatter={v => `R$ ${(v / 1000).toFixed(0)}k`}
               tick={{ fontSize: 11, fill: 'var(--text-2)' }} axisLine={false} tickLine={false} />
-            <YAxis type="category" dataKey="name" width={160}
+            <YAxis type="category" dataKey="name" width={isMobile ? 80 : 160}
               tick={{ fontSize: 11, fill: 'var(--text-2)' }} axisLine={false} tickLine={false} />
             <Tooltip content={<CustomTooltip />} />
             <Bar dataKey="Valor" fill="#D14B3A" radius={[0, 4, 4, 0]} barSize={18} name="Valor" />
@@ -389,19 +392,20 @@ function KPICard({ label, value, color, sub }) {
     <div style={{
       background: 'var(--surface)', border: '1px solid var(--border)',
       borderTop: `3px solid ${color}`, borderRadius: 'var(--radius)',
-      padding: '1.25rem 1rem', flex: 1, minWidth: 0,
-      boxShadow: 'var(--shadow)',
+      padding: '1.25rem 1rem', flex: '1 1 135px', minWidth: 135,
+      boxShadow: 'var(--shadow)', overflow: 'hidden',
     }}>
       <div style={{
         fontSize: '0.65rem', fontWeight: 700, letterSpacing: '1.5px',
         textTransform: 'uppercase', color: 'var(--text-2)', marginBottom: '0.5rem',
       }}>{label}</div>
       <div style={{
-        fontSize: 'clamp(1rem, 2.5vw, 1.5rem)',
+        fontSize: 'clamp(0.95rem, 1.6vw, 1.3rem)',
         fontWeight: 700, color: 'var(--text)',
         fontVariantNumeric: 'tabular-nums',
+        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
       }}>{value}</div>
-      {sub && <div style={{ fontSize: '0.7rem', color: 'var(--text-3)', marginTop: '0.3rem' }}>{sub}</div>}
+      {sub && <div style={{ fontSize: '0.7rem', color: 'var(--text-3)', marginTop: '0.3rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub}</div>}
     </div>
   )
 }

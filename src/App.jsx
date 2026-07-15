@@ -126,20 +126,17 @@ export default function App() {
       {/* Header */}
       <header style={{
         background: 'var(--surface)', borderBottom: '1px solid var(--border)',
-        padding: '0 2rem', display: 'flex', alignItems: 'center',
-        justifyContent: 'space-between', height: 60, position: 'sticky',
-        top: 0, zIndex: 100, boxShadow: '0 1px 8px rgba(0,0,0,0.05)',
+        padding: `0.6rem var(--header-padding)`, display: 'flex', alignItems: 'center',
+        justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap', minHeight: 60,
+        position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 1px 8px rgba(0,0,0,0.05)',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <span style={{ fontSize: '1.5rem' }}>👠</span>
-          <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+          <span style={{ fontSize: '1.5rem', flexShrink: 0 }}>👠</span>
+          <div style={{ minWidth: 0, overflow: 'hidden' }}>
             <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text)', letterSpacing: '-0.3px' }}>
               Consignações
             </span>
-            <span style={{
-              marginLeft: '0.75rem', fontSize: '0.6875rem', fontWeight: 600,
-              letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--text-3)',
-            }}>
+            <span className="app-header-meta">
               {data.length.toLocaleString('pt-BR')} registros
             </span>
           </div>
@@ -147,21 +144,21 @@ export default function App() {
         <button
           onClick={load}
           style={{
-            display: 'flex', alignItems: 'center', gap: '0.4rem',
+            display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0,
             fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-2)',
             padding: '0.35rem 0.85rem', border: '1px solid var(--border)',
             borderRadius: 'var(--radius-sm)', background: 'var(--surface-2)',
             cursor: 'pointer', letterSpacing: '0.5px',
           }}
         >
-          {icons.refresh} Atualizar
+          {icons.refresh} <span className="app-header-refresh-label">Atualizar</span>
         </button>
       </header>
 
       {/* Tabs */}
       <nav style={{
         background: 'var(--surface)', borderBottom: '1px solid var(--border)',
-        padding: '0 2rem', display: 'flex', gap: 0, overflowX: 'auto',
+        padding: `0 var(--header-padding)`, display: 'flex', gap: 0, overflowX: 'auto',
       }}>
         {TABS.map(tab => (
           <button
@@ -169,7 +166,7 @@ export default function App() {
             onClick={() => setActiveTab(tab.id)}
             style={{
               display: 'flex', alignItems: 'center', gap: '0.45rem',
-              padding: '0.7rem 1.1rem',
+              padding: '0.7rem 0.9rem',
               fontSize: '0.75rem', fontWeight: 600,
               letterSpacing: '0.5px', textTransform: 'uppercase',
               color: activeTab === tab.id ? 'var(--text)' : 'var(--text-2)',
@@ -187,7 +184,7 @@ export default function App() {
       </nav>
 
       {/* Content */}
-      <main style={{ flex: 1, padding: '2rem', maxWidth: 1400, width: '100%', margin: '0 auto' }}>
+      <main style={{ flex: 1, padding: 'var(--page-padding)', maxWidth: 1400, width: '100%', margin: '0 auto' }}>
         {activeTab === 'resumo'    && <KPICards      data={data} />}
         {activeTab === 'mes'       && <MonthAnalysis  data={data} />}
         {activeTab === 'pendentes' && <NoReturnPanel  data={data} />}

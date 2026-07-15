@@ -32,10 +32,10 @@ function Stat({ label, value, valueColor, sub }) {
   return (
     <div style={{
       background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)',
-      padding: '0.9rem 1rem', flex: 1, minWidth: 140,
+      padding: '0.9rem 1rem', flex: '1 1 140px', minWidth: 140, overflow: 'hidden',
     }}>
       <div style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '1.2px', textTransform: 'uppercase', color: 'var(--text-2)', marginBottom: '0.4rem' }}>{label}</div>
-      <div style={{ fontSize: '1.1rem', fontWeight: 700, color: valueColor || 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{value}</div>
+      <div style={{ fontSize: '1.1rem', fontWeight: 700, color: valueColor || 'var(--text)', fontVariantNumeric: 'tabular-nums', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value}</div>
       {sub && <div style={{ fontSize: '0.7rem', color: 'var(--text-3)', marginTop: '0.2rem' }}>{sub}</div>}
     </div>
   )

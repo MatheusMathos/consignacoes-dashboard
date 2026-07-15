@@ -5,6 +5,7 @@ import {
 import { getStoreRanking, fmtBRL, fmtInt } from '../utils/dataProcessing.js'
 import { SortableTh, useSortableTable, sortRows } from '../utils/sortableTable.jsx'
 import { exportTableToExcel } from '../utils/exportExcel.js'
+import { useIsMobile } from '../utils/useMediaQuery.js'
 import ExportButton from './ExportButton.jsx'
 
 const RANKING_COLUMNS = {
@@ -47,14 +48,16 @@ function CustomTooltip({ active, payload, label }) {
 
 export default function StoreRanking({ data }) {
   const ranking = useMemo(() => getStoreRanking(data), [data])
+  const isMobile = useIsMobile()
   const { sortCol, sortDir, onSort } = useSortableTable('valorPendente', 'desc')
   const sortedRanking = useMemo(
     () => sortRows(ranking, sortCol, sortDir, RANKING_COLUMNS),
     [ranking, sortCol, sortDir]
   )
 
+  const nameMax = isMobile ? 12 : 22
   const chartData = ranking.slice(0, 10).map(r => ({
-    name: r.loja.length > 22 ? r.loja.slice(0, 20) + '…' : r.loja,
+    name: r.loja.length > nameMax ? r.loja.slice(0, nameMax - 2) + '…' : r.loja,
     fullName: r.loja,
     Saídas: r.saidas,
     Retornos: r.entradas,
@@ -73,9 +76,9 @@ export default function StoreRanking({ data }) {
       }}>
         {ranking.map(({ loja, saidas, entradas, saldo, pendentes, valorPendente }) => (
           <div key={loja} style={{ marginBottom: '1.1rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.3rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: '0.3rem 1rem', marginBottom: '0.3rem' }}>
               <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text)' }}>{loja}</span>
-              <div style={{ display: 'flex', gap: '1rem', fontSize: '0.75rem' }}>
+              <div style={{ display: 'flex', gap: '1rem', fontSize: '0.75rem', flexWrap: 'wrap' }}>
                 <span style={{ color: 'var(--text-2)' }}>Saldo: <strong style={{ color: saldo > 0 ? 'var(--warning)' : 'var(--success)' }}>{fmtBRL(saldo)}</strong></span>
                 <span style={{ color: 'var(--danger)', fontWeight: 700 }}>{fmtBRL(valorPendente)}</span>
               </div>
@@ -105,7 +108,7 @@ export default function StoreRanking({ data }) {
           <BarChart data={chartData} layout="vertical" margin={{ left: 0, right: 20 }} barGap={2} barSize={12}>
             <XAxis type="number" tickFormatter={v => `R$ ${(v/1000).toFixed(0)}k`}
               tick={{ fontSize: 10, fill: 'var(--text-2)' }} axisLine={false} tickLine={false} />
-            <YAxis type="category" dataKey="name" width={160}
+            <YAxis type="category" dataKey="name" width={isMobile ? 80 : 160}
               tick={{ fontSize: 10, fill: 'var(--text-2)' }} axisLine={false} tickLine={false} />
             <Tooltip content={<CustomTooltip />} />
             <Bar dataKey="Saídas"   fill="#C9B99A" radius={[0,3,3,0]} name="Saídas" />

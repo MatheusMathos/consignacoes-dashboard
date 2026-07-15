@@ -18,12 +18,36 @@
   --radius-sm: 8px;
   --shadow: 0 2px 12px rgba(0,0,0,0.06);
   --shadow-lg: 0 8px 32px rgba(0,0,0,0.10);
+
+  /* Espaçamentos responsivos — usados via var() em estilos inline */
+  --header-padding: 2rem;
+  --page-padding: 2rem;
+  --card-padding: 1.5rem;
+
   font-family: 'Inter', system-ui, sans-serif;
   font-size: 14px;
   color: var(--text);
   background: var(--bg);
 }
 
+@media (max-width: 900px) {
+  :root {
+    --header-padding: 1.25rem;
+    --page-padding: 1.25rem;
+    --card-padding: 1.1rem;
+  }
+}
+
+@media (max-width: 560px) {
+  :root {
+    --header-padding: 0.85rem;
+    --page-padding: 0.85rem;
+    --card-padding: 0.9rem;
+    font-size: 13px;
+  }
+}
+
+html, body { max-width: 100%; overflow-x: hidden; }
 body { background: var(--bg); min-height: 100vh; }
 
 button {
@@ -80,3 +104,23 @@ tbody tr:hover { background: var(--surface-2); }
 tbody td { padding: 0.6rem 0.9rem; color: var(--text); }
 tbody td.right { text-align: right; font-variant-numeric: tabular-nums; }
 tbody td.muted { color: var(--text-2); font-size: 0.75rem; }
+
+@media (max-width: 560px) {
+  table { font-size: 0.75rem; }
+  thead th { padding: 0.5rem 0.6rem; font-size: 0.625rem; }
+  tbody td { padding: 0.5rem 0.6rem; }
+}
+
+/* Responsividade geral */
+.app-header-meta {
+  margin-left: 0.75rem; font-size: 0.6875rem; font-weight: 600;
+  letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-3);
+  white-space: nowrap;
+}
+@media (max-width: 480px) {
+  .app-header-meta { display: none; }
+}
+.app-header-refresh-label { display: inline; }
+@media (max-width: 400px) {
+  .app-header-refresh-label { display: none; }
+}

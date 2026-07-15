@@ -25,12 +25,16 @@ function Card({ label, value, sub, color = 'var(--accent)', small = false }) {
     <div style={{
       background: 'var(--surface)', border: '1px solid var(--border)',
       borderTop: `3px solid ${color}`, borderRadius: 'var(--radius)',
-      padding: '1.25rem 1rem', flex: 1, minWidth: 0,
-      boxShadow: 'var(--shadow)',
+      padding: '1.25rem 1rem', flex: '1 1 135px', minWidth: 135,
+      boxShadow: 'var(--shadow)', overflow: 'hidden',
     }}>
       <div style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--text-2)', marginBottom: '0.5rem', lineHeight: 1.4 }}>{label}</div>
-      <div style={{ fontSize: small ? '1.1rem' : 'clamp(1rem, 2.5vw, 1.5rem)', fontWeight: 700, color: 'var(--text)', lineHeight: 1.2, fontVariantNumeric: 'tabular-nums' }}>{value}</div>
-      {sub && <div style={{ fontSize: '0.7rem', color: 'var(--text-3)', marginTop: '0.3rem' }}>{sub}</div>}
+      <div style={{
+        fontSize: small ? '1.1rem' : 'clamp(0.95rem, 1.6vw, 1.3rem)', fontWeight: 700, color: 'var(--text)',
+        lineHeight: 1.2, fontVariantNumeric: 'tabular-nums',
+        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+      }}>{value}</div>
+      {sub && <div style={{ fontSize: '0.7rem', color: 'var(--text-3)', marginTop: '0.3rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub}</div>}
     </div>
   )
 }
@@ -79,8 +83,8 @@ export default function KPICards({ data }) {
 
   return (
     <div className="fade-in">
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
-        <SectionTitle style={{ flex: 1, minWidth: 160 }}>Visão Geral</SectionTitle>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
+        <SectionTitle style={{ flex: 1, minWidth: 160, marginBottom: 0 }}>Visão Geral</SectionTitle>
         <ExportButton variant="word" onClick={handleExportWord}>
           {exportingWord ? 'Gerando...' : 'Exportar Word Visão Geral'}
         </ExportButton>
